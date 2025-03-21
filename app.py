@@ -55,8 +55,15 @@ def get_location_from_viacep(cep):
             latitude = location_data["lat"]
             longitude = location_data["lon"]
         else:
-            latitude = "Não encontrado"
-            longitude = "Não encontrado"
+            nominatim_url = f"https://nominatim.openstreetmap.org/search?city={cidade}&country=Brazil&format=json"
+            nominatim_response = requests.get(nominatim_url, headers={"User-Agent": "Mozilla/5.0"})
+            if nominatim_response.status_code == 200 and nominatim_response.json():
+                location_data = nominatim_response.json()[0]
+                latitude = location_data["lat"]
+                longitude = location_data["lon"]
+            else:
+                latitude = "Não encontrado"
+                longitude = "Não encontrado"
 
         return {"cidade": cidade, "latitude": latitude, "longitude": longitude}
 
@@ -132,7 +139,7 @@ def parse_extracted_text(text):
             r"\s*([A-Za-z\s0-9]+)\n"
             r"\s*([A-Z\s]+)\n"
             r"\s*CEP:\s*(\d{5}-?\d{3}|\d{8})\n"
-            r"\s*CPF/CNPJ:\s*([\d\.-]+)"
+            r"\s*CPF/CNPJ:\s*((?:\d{3}\.\d{3}\.\d{3}-\d{2})|(?:\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2})|\d{11}|\d{14})"
         )
         match = re.search(pattern, text)
 
@@ -141,8 +148,8 @@ def parse_extracted_text(text):
 
     nome = match.group(1).strip()
     endereco = match.group(2).strip()
-    numero_match = re.search(r"(\d{3,5})\s*(?:[A-Za-z]*?)$", endereco)
-    numero_residencia = numero_match.group(1) if numero_match else ""
+    numero_residencia_match = re.search(r"(\d{3,5}\s*(?:[A-Za-z]+\s*\d*\s*[A-Za-z]*\s*\d*)*)", endereco)
+    numero_residencia = numero_residencia_match.group(1).strip() if numero_residencia_match else ""
     endereco = endereco.replace(numero_residencia, "").strip()
 
     bairro_cidade_estado = match.group(3).strip()
@@ -157,9 +164,14 @@ def parse_extracted_text(text):
     tipo_fase = "MONOFÁSICO" if "MONOFÁSICO" in text else "TRIFÁSICO" if "TRIFÁSICO" in text else "BIFÁSICO"
     tensao_atendimento = "220V" if tipo_fase in ["MONOFÁSICO", "BIFÁSICO"] else "380V"
 
-    residencial_conv_pattern = r"(\w+)\s*RESIDENCIAL-CONV\."
-    residencial_conv_match = re.search(residencial_conv_pattern, text)
-    residencial_conv_value = residencial_conv_match.group(1).strip() if residencial_conv_match else ""
+    values_to_match = ["A1", "A2", "A3", "A3a", "A4", "AS", "B1", "B2", "B3", "B4"]
+
+    pattern = r"\b(" + "|".join(re.escape(value) for value in values_to_match) + r")\b"
+
+    match = re.search(pattern, text)
+    # Extrai o valor correspondente, se encontrado
+    classificacao_unidade = match.group(1).strip() if match else ""
+    print(classificacao_unidade)
 
     numero_cliente_pattern = r"(\d{7,10})\n\d{2}/\d{4}"
     numero_cliente_match = re.search(numero_cliente_pattern, text)
@@ -178,7 +190,7 @@ def parse_extracted_text(text):
         "cpf_cnpj": cpf_cnpj,
         "tipo_fase": tipo_fase,
         "tensao_atendimento": tensao_atendimento,
-        "residencial_conv": residencial_conv_value,
+        "classificacao_unidade": classificacao_unidade,
         "numero_cliente": numero_cliente,
     }
 
@@ -205,6 +217,7 @@ def extract_text():
         return jsonify({"error": error_message}), 400
 
     extracted_data, error_message = parse_extracted_text(text)
+    print(extracted_data)
     if error_message:
         return jsonify({"error": error_message}), 400
 
@@ -220,7 +233,7 @@ def export_to_excel():
     cep = request.form.get('cep')
     cpf_cnpj = request.form.get('cpf_cnpj')
     tipo_fase = request.form.get('tipo_fase')
-    residencial_conv = request.form.get('residencial_conv')
+    residencial_conv = request.form.get('classificacao_unidade')
     numero_cliente = request.form.get('numero_cliente')
     latitude = request.form.get('latitude')
     longitude = request.form.get('longitude')

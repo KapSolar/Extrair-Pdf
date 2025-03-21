@@ -265,7 +265,7 @@
                     document.getElementById('longitude').value = data.longitude;
                     document.getElementById('cpf-cnpj').value = data.cpf_cnpj;
                     document.getElementById('tipo-fornecimento').value = data.tipo_fase;
-                    document.getElementById('classificacao-unidade').value = data.residencial_conv;
+                    document.getElementById('classificacao-unidade').value = data.classificacao_unidade;
                     document.getElementById('numero-cliente').value = data.numero_cliente;
                     document.getElementById('tensao-atendimento').value = data.tensao_atendimento;
                     document.getElementById('dados-extraidos').textContent = "Dados Extraídos";
@@ -293,7 +293,7 @@
             formData.append('cep', document.getElementById('cep').value);
             formData.append('cpf_cnpj', document.getElementById('cpf-cnpj').value);
             formData.append('tipo_fase', document.getElementById('tipo-fornecimento').value);
-            formData.append('residencial_conv', document.getElementById('classificacao-unidade').value);
+            formData.append('classificacao_unidade', document.getElementById('classificacao-unidade').value);
             formData.append('email', document.getElementById('email').value);
             formData.append('numero_cliente', document.getElementById('numero-cliente').value);
             formData.append('latitude', document.getElementById('latitude').value);
